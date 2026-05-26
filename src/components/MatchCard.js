@@ -32,7 +32,19 @@ const MatchCard = ({ match }) => {
   const displayMonth = getMonthName((matchDateObj.getMonth() + 1).toString());
   const displaySchedule = `${matchDateObj.getHours().toString().padStart(2, '0')}:${matchDateObj.getMinutes().toString().padStart(2, '0')}`;
 
-  const showScore = now >= matchDateObj;
+  // Helper to check if match is today
+  const isToday = (mDate) => {
+    const today = new Date();
+    return mDate.getDate() === today.getDate() &&
+           mDate.getMonth() === today.getMonth() &&
+           mDate.getFullYear() === today.getFullYear();
+  };
+
+  const matchIsToday = isToday(matchDateObj);
+  
+  // Logic: Do not show score if match is today.
+  // Show score only if it's NOT today AND match time has passed.
+  const showScore = !matchIsToday && now >= matchDateObj;
 
   return (
     <View style={styles.container}>

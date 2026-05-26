@@ -8,6 +8,7 @@ import {
   Text,
   TouchableOpacity
 } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { useFonts, Anton_400Regular } from '@expo-google-fonts/anton';
 import { 
   Inter_400Regular, 
@@ -98,65 +99,67 @@ export default function App() {
   };
 
   return (
-    <View style={styles.container}>
-      <StatusBar barStyle="light-content" />
-      <Header />
-      
-      <View style={styles.content}>
-        {renderContent()}
-      </View>
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.container} edges={['right', 'bottom', 'left']}>
+        <StatusBar barStyle="light-content" />
+        <Header />
+        
+        <View style={styles.content}>
+          {renderContent()}
+        </View>
 
-      {/* Bottom Navigation */}
-      <View style={styles.bottomNav}>
-        <TouchableOpacity 
-          style={styles.navItem} 
-          onPress={() => setActiveTab('today')}
-        >
-          <Calendar 
-            size={22} 
-            color={activeTab === 'today' ? Colors.primary : Colors.onSurfaceVariant} 
-            strokeWidth={activeTab === 'today' ? 3 : 2}
-          />
-          <Text style={[styles.navText, activeTab === 'today' && styles.activeNavText]}>HOJE</Text>
-        </TouchableOpacity>
+        {/* Bottom Navigation */}
+        <View style={styles.bottomNav}>
+          <TouchableOpacity 
+            style={styles.navItem} 
+            onPress={() => setActiveTab('today')}
+          >
+            <Calendar 
+              size={22} 
+              color={activeTab === 'today' ? Colors.primary : Colors.onSurfaceVariant} 
+              strokeWidth={activeTab === 'today' ? 3 : 2}
+            />
+            <Text style={[styles.navText, activeTab === 'today' && styles.activeNavText]}>HOJE</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => setActiveTab('teams')}
-        >
-          <Users 
-            size={22} 
-            color={activeTab === 'teams' ? Colors.primary : Colors.onSurfaceVariant} 
-            strokeWidth={activeTab === 'teams' ? 3 : 2}
-          />
-          <Text style={[styles.navText, activeTab === 'teams' && styles.activeNavText]}>TIMES</Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.navItem}
+            onPress={() => setActiveTab('teams')}
+          >
+            <Users 
+              size={22} 
+              color={activeTab === 'teams' ? Colors.primary : Colors.onSurfaceVariant} 
+              strokeWidth={activeTab === 'teams' ? 3 : 2}
+            />
+            <Text style={[styles.navText, activeTab === 'teams' && styles.activeNavText]}>TIMES</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => setActiveTab('tournaments')}
-        >
-          <Trophy 
-            size={22} 
-            color={activeTab === 'tournaments' ? Colors.primary : Colors.onSurfaceVariant} 
-            strokeWidth={activeTab === 'tournaments' ? 3 : 2}
-          />
-          <Text style={[styles.navText, activeTab === 'tournaments' && styles.activeNavText]}>CAMPEONATOS</Text>
-        </TouchableOpacity>
+          <TouchableOpacity 
+            style={styles.navItem}
+            onPress={() => setActiveTab('tournaments')}
+          >
+            <Trophy 
+              size={22} 
+              color={activeTab === 'tournaments' ? Colors.primary : Colors.onSurfaceVariant} 
+              strokeWidth={activeTab === 'tournaments' ? 3 : 2}
+            />
+            <Text style={[styles.navText, activeTab === 'tournaments' && styles.activeNavText]}>CAMPEONATOS</Text>
+          </TouchableOpacity>
 
-        <TouchableOpacity 
-          style={styles.navItem}
-          onPress={() => setActiveTab('about')}
-        >
-          <Info 
-            size={22} 
-            color={activeTab === 'about' ? Colors.primary : Colors.onSurfaceVariant} 
-            strokeWidth={activeTab === 'about' ? 3 : 2}
-          />
-          <Text style={[styles.navText, activeTab === 'about' && styles.activeNavText]}>SOBRE</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
+          <TouchableOpacity 
+            style={styles.navItem}
+            onPress={() => setActiveTab('about')}
+          >
+            <Info 
+              size={22} 
+              color={activeTab === 'about' ? Colors.primary : Colors.onSurfaceVariant} 
+              strokeWidth={activeTab === 'about' ? 3 : 2}
+            />
+            <Text style={[styles.navText, activeTab === 'about' && styles.activeNavText]}>SOBRE</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
