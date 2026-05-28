@@ -21,9 +21,9 @@ export const getTodayMatches = async () => {
   }
 };
 
-export const getTeams = async () => {
+export const getTeams = async (params = {}) => {
   try {
-    const response = await api.get('/teams');
+    const response = await api.get('/teams', { params });
     return response.data;
   } catch (error) {
     console.error('Error fetching teams:', error);

@@ -15,7 +15,8 @@ const MatchCard = ({ match }) => {
     stadium,
     location,
     schedule,
-    timestamp
+    timestamp,
+    featured
   } = match;
 
   const getMatchDateTime = () => {
@@ -32,7 +33,6 @@ const MatchCard = ({ match }) => {
   const displayMonth = getMonthName((matchDateObj.getMonth() + 1).toString());
   const displaySchedule = `${matchDateObj.getHours().toString().padStart(2, '0')}:${matchDateObj.getMinutes().toString().padStart(2, '0')}`;
 
-  // Helper to check if match is today
   const isToday = (mDate) => {
     const today = new Date();
     return mDate.getDate() === today.getDate() &&
@@ -41,28 +41,39 @@ const MatchCard = ({ match }) => {
   };
 
   const matchIsToday = isToday(matchDateObj);
-  
-  // Logic: Do not show score if match is today.
-  // Show score only if it's NOT today AND match time has passed.
   const showScore = !matchIsToday && now >= matchDateObj;
 
   return (
-    <View style={styles.container}>
+    <View style={[
+      styles.container, 
+      featured && styles.featuredContainer
+    ]}>
       {/* Left 18%: Date/Time */}
-      <View style={styles.leftSection}>
-        <Text style={styles.dateText}>{matchDateObj.getDate()} {displayMonth}</Text>
-        <Text style={styles.timeText}>{displaySchedule}</Text>
+      <View style={[
+        styles.leftSection,
+        featured && styles.featuredLeftSection
+      ]}>
+        <Text style={[
+          styles.dateText,
+          featured && styles.featuredText
+        ]}>{matchDateObj.getDate()} {displayMonth}</Text>
+        <Text style={[
+          styles.timeText,
+          featured && styles.featuredTimeText
+        ]}>{displaySchedule}</Text>
       </View>
 
       {/* Right 82%: Match Details */}
       <View style={styles.rightSection}>
         <View style={styles.tournamentContainer}>
-          <Trophy size={10} color={Colors.primary} strokeWidth={3} />
-          <Text style={styles.tournamentText} numberOfLines={1}>{tournament}</Text>
+          <Trophy size={10} color={featured ? Colors.primary : Colors.primary} strokeWidth={3} />
+          <Text style={[
+            styles.tournamentText,
+            featured && styles.featuredTournamentText
+          ]} numberOfLines={1}>{tournament}</Text>
         </View>
 
         <View style={styles.matchRow}>
-          {/* Home Team Group */}
           <View style={styles.teamGroup}>
             <Text style={styles.teamName}>{homeTeam}</Text>
             {showScore && <Text style={styles.score}>{homeScore}</Text>}
@@ -72,7 +83,6 @@ const MatchCard = ({ match }) => {
              <Text style={styles.vsText}>{showScore ? 'x' : 'vs'}</Text>
           </View>
           
-          {/* Away Team Group */}
           <View style={styles.teamGroup}>
             {showScore && <Text style={styles.score}>{awayScore}</Text>}
             <Text style={styles.teamName}>{awayTeam}</Text>
@@ -80,8 +90,11 @@ const MatchCard = ({ match }) => {
         </View>
 
         <View style={styles.locationContainer}>
-          <MapPin size={12} color={Colors.onSurfaceVariant} />
-          <Text style={styles.locationText} numberOfLines={1}>
+          <MapPin size={12} color={featured ? Colors.onSurface : Colors.onSurfaceVariant} />
+          <Text style={[
+            styles.locationText,
+            featured && styles.featuredLocationText
+          ]} numberOfLines={1}>
             {stadium}{location ? `, ${location}` : ''}
           </Text>
         </View>
@@ -120,6 +133,11 @@ const styles = StyleSheet.create({
       }
     }),
   },
+  featuredContainer: {
+    backgroundColor: Colors.surfaceContainerHigh, // Slightly lighter
+    borderColor: Colors.primary, // Gold border
+    borderWidth: 1.5,
+  },
   leftSection: {
     width: '18%',
     backgroundColor: Colors.surfaceContainerHigh,
@@ -128,6 +146,10 @@ const styles = StyleSheet.create({
     padding: 4,
     borderRightWidth: 1,
     borderRightColor: 'rgba(153, 144, 119, 0.2)',
+  },
+  featuredLeftSection: {
+    backgroundColor: 'rgba(255, 215, 0, 0.1)', // Subtle gold tint
+    borderRightColor: Colors.primary,
   },
   dateText: {
     ...Typography.labelLg,
@@ -141,6 +163,13 @@ const styles = StyleSheet.create({
     color: Colors.primary,
     fontSize: 16,
     marginTop: 2,
+  },
+  featuredTimeText: {
+    fontWeight: '900',
+  },
+  featuredText: {
+    color: Colors.onSurface,
+    fontWeight: 'bold',
   },
   rightSection: {
     width: '82%',
@@ -160,6 +189,10 @@ const styles = StyleSheet.create({
     fontSize: 9,
     letterSpacing: 0.5,
     flex: 1,
+  },
+  featuredTournamentText: {
+    letterSpacing: 1.5,
+    fontWeight: 'bold',
   },
   matchRow: {
     flexDirection: 'row',
@@ -208,6 +241,10 @@ const styles = StyleSheet.create({
     fontSize: 10,
     opacity: 0.8,
   },
+  featuredLocationText: {
+    color: Colors.onSurface,
+    opacity: 1,
+  }
 });
 
 export default MatchCard;
