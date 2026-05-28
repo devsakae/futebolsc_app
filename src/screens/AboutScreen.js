@@ -29,12 +29,12 @@ const AboutScreen = () => {
           <View style={styles.iconCircle}>
             <User size={32} color={Colors.primary} />
           </View>
-          <Text style={styles.devName}>Rod Sakae</Text>
-          <Text style={styles.devBio}>Engenheiro de Software & Desenvolvedor Fullstack</Text>
+          <Text style={styles.devName}>devsakae</Text>
+          <Text style={styles.devBio}>Fullstack Developer</Text>
           
           <TouchableOpacity style={styles.button} onPress={visitWebsite}>
             <Globe size={18} color={Colors.black} />
-            <Text style={styles.buttonText}>PORTFÓLIO</Text>
+            <Text style={styles.buttonText}>PORTFOLIO</Text>
           </TouchableOpacity>
         </View>
 
