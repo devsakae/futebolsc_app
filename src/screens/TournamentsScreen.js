@@ -113,7 +113,7 @@ const TournamentsScreen = () => {
         <FlatList
           ref={listRef}
           data={matches}
-          renderItem={({ item }) => <MatchCard match={item} />}
+          renderItem={({ item }) => <MatchCard match={item} allowFeatured={false} />}
           keyExtractor={(item, index) => item.match_id?.toString() || index.toString()}
           contentContainerStyle={styles.listContainer}
           onScrollToIndexFailed={(info) => {

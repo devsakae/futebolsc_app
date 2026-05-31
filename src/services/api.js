@@ -61,4 +61,14 @@ export const getMatchesByTournament = async (tournamentName) => {
   }
 };
 
+export const verifyUser = async (userData) => {
+  try {
+    const response = await api.post('/user/verify', userData);
+    return response.data;
+  } catch (error) {
+    console.error('Error verifying user:', error);
+    throw error;
+  }
+};
+
 export default api;

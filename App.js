@@ -9,19 +9,21 @@ import {
   TouchableOpacity
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useFonts, Anton_400Regular } from '@expo-google-fonts/anton';
 import { 
   Inter_400Regular, 
   Inter_600SemiBold, 
   Inter_700Bold 
 } from '@expo-google-fonts/inter';
-import { Calendar, Users, Trophy, Info } from 'lucide-react-native';
+import { Calendar, Users, Trophy, Info, Crown } from 'lucide-react-native';
 
 import Header from './src/components/Header';
 import MatchCard from './src/components/MatchCard';
 import AboutScreen from './src/screens/AboutScreen';
 import TeamsScreen from './src/screens/TeamsScreen';
 import TournamentsScreen from './src/screens/TournamentsScreen';
+import PremiumScreen from './src/screens/PremiumScreen';
 import { Colors } from './src/constants/Colors';
 import { getTodayMatches } from './src/services/api';
 
@@ -56,7 +58,7 @@ export default function App() {
 
   if (!fontsLoaded) {
     return (
-      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background }]}>
         <ActivityIndicator size="large" color={Colors.primary} />
       </View>
     );
@@ -70,6 +72,8 @@ export default function App() {
         return <TeamsScreen />;
       case 'tournaments':
         return <TournamentsScreen />;
+      case 'premium':
+        return <PremiumScreen />;
       default:
         if (loading) {
           return (
@@ -116,7 +120,7 @@ export default function App() {
               onPress={() => setActiveTab('today')}
             >
               <Calendar 
-                size={22} 
+                size={20} 
                 color={activeTab === 'today' ? Colors.primary : Colors.onSurfaceVariant} 
                 strokeWidth={activeTab === 'today' ? 3 : 2}
               />
@@ -128,11 +132,33 @@ export default function App() {
               onPress={() => setActiveTab('teams')}
             >
               <Users 
-                size={22} 
+                size={20} 
                 color={activeTab === 'teams' ? Colors.primary : Colors.onSurfaceVariant} 
                 strokeWidth={activeTab === 'teams' ? 3 : 2}
               />
               <Text style={[styles.navText, activeTab === 'teams' && styles.activeNavText]}>TIMES</Text>
+            </TouchableOpacity>
+
+            {/* STYLISH PREMIUM BUTTON */}
+            <TouchableOpacity 
+              style={styles.premiumNavItem}
+              onPress={() => setActiveTab('premium')}
+            >
+              <LinearGradient
+                colors={activeTab === 'premium' ? [Colors.primary, '#E9C400', '#B8860B'] : ['#333', '#1A1A1A']}
+                style={styles.premiumIconCircle}
+              >
+                <Crown 
+                  size={24} 
+                  color={activeTab === 'premium' ? Colors.black : Colors.onSurfaceVariant} 
+                  strokeWidth={2.5}
+                />
+              </LinearGradient>
+              <Text style={[
+                styles.navText, 
+                { fontSize: 7, marginTop: 2 },
+                activeTab === 'premium' && { color: Colors.primary, fontWeight: '900' }
+              ]}>PREMIUM</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -140,11 +166,11 @@ export default function App() {
               onPress={() => setActiveTab('tournaments')}
             >
               <Trophy 
-                size={22} 
+                size={20} 
                 color={activeTab === 'tournaments' ? Colors.primary : Colors.onSurfaceVariant} 
                 strokeWidth={activeTab === 'tournaments' ? 3 : 2}
               />
-              <Text style={[styles.navText, activeTab === 'tournaments' && styles.activeNavText]}>CAMPEONATOS</Text>
+              <Text style={[styles.navText, activeTab === 'tournaments' && styles.activeNavText]}>CAMP.</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
@@ -152,7 +178,7 @@ export default function App() {
               onPress={() => setActiveTab('about')}
             >
               <Info 
-                size={22} 
+                size={20} 
                 color={activeTab === 'about' ? Colors.primary : Colors.onSurfaceVariant} 
                 strokeWidth={activeTab === 'about' ? 3 : 2}
               />
@@ -175,7 +201,7 @@ const styles = StyleSheet.create({
   emptyText: { fontFamily: 'Anton_400Regular', color: Colors.onSurfaceVariant, fontSize: 16, letterSpacing: 1 },
   bottomNav: {
     flexDirection: 'row',
-    height: 60,
+    height: 65,
     backgroundColor: Colors.surface,
     borderTopWidth: 1,
     borderTopColor: 'rgba(77, 71, 50, 0.3)',
@@ -183,6 +209,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   navItem: { alignItems: 'center', justifyContent: 'center', flex: 1 },
-  navText: { fontFamily: 'Inter_700Bold', fontSize: 8, color: Colors.onSurfaceVariant, marginTop: 4, letterSpacing: 0.5 },
+  premiumNavItem: { 
+    alignItems: 'center', 
+    justifyContent: 'center', 
+    flex: 1,
+    marginTop: -15, // Lift the button slightly
+  },
+  premiumIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+  },
+  navText: { fontFamily: 'Inter_700Bold', fontSize: 7, color: Colors.onSurfaceVariant, marginTop: 4, letterSpacing: 0.5 },
   activeNavText: { color: Colors.primary },
 });

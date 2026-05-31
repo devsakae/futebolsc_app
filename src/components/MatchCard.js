@@ -4,7 +4,7 @@ import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
 import { MapPin, Trophy } from 'lucide-react-native';
 
-const MatchCard = ({ match }) => {
+const MatchCard = ({ match, allowFeatured = true }) => {
   const {
     tournament,
     date,
@@ -18,6 +18,9 @@ const MatchCard = ({ match }) => {
     timestamp,
     featured
   } = match;
+
+  // Actual visibility of featured styles depends on both data flag and prop permission
+  const isFeatured = featured && allowFeatured;
 
   const getMatchDateTime = () => {
     if (timestamp && timestamp > 0) {
@@ -46,30 +49,30 @@ const MatchCard = ({ match }) => {
   return (
     <View style={[
       styles.container, 
-      featured && styles.featuredContainer
+      isFeatured && styles.featuredContainer
     ]}>
       {/* Left 18%: Date/Time */}
       <View style={[
         styles.leftSection,
-        featured && styles.featuredLeftSection
+        isFeatured && styles.featuredLeftSection
       ]}>
         <Text style={[
           styles.dateText,
-          featured && styles.featuredText
+          isFeatured && styles.featuredText
         ]}>{matchDateObj.getDate()} {displayMonth}</Text>
         <Text style={[
           styles.timeText,
-          featured && styles.featuredTimeText
+          isFeatured && styles.featuredTimeText
         ]}>{displaySchedule}</Text>
       </View>
 
       {/* Right 82%: Match Details */}
       <View style={styles.rightSection}>
         <View style={styles.tournamentContainer}>
-          <Trophy size={10} color={featured ? Colors.primary : Colors.primary} strokeWidth={3} />
+          <Trophy size={10} color={Colors.primary} strokeWidth={3} />
           <Text style={[
             styles.tournamentText,
-            featured && styles.featuredTournamentText
+            isFeatured && styles.featuredTournamentText
           ]} numberOfLines={1}>{tournament}</Text>
         </View>
 
@@ -90,10 +93,10 @@ const MatchCard = ({ match }) => {
         </View>
 
         <View style={styles.locationContainer}>
-          <MapPin size={12} color={featured ? Colors.onSurface : Colors.onSurfaceVariant} />
+          <MapPin size={12} color={isFeatured ? Colors.onSurface : Colors.onSurfaceVariant} />
           <Text style={[
             styles.locationText,
-            featured && styles.featuredLocationText
+            isFeatured && styles.featuredLocationText
           ]} numberOfLines={1}>
             {stadium}{location ? `, ${location}` : ''}
           </Text>
@@ -134,8 +137,8 @@ const styles = StyleSheet.create({
     }),
   },
   featuredContainer: {
-    backgroundColor: Colors.surfaceContainerHigh, // Slightly lighter
-    borderColor: Colors.primary, // Gold border
+    backgroundColor: Colors.surfaceContainerHigh,
+    borderColor: Colors.primary,
     borderWidth: 1.5,
   },
   leftSection: {
@@ -148,7 +151,7 @@ const styles = StyleSheet.create({
     borderRightColor: 'rgba(153, 144, 119, 0.2)',
   },
   featuredLeftSection: {
-    backgroundColor: 'rgba(255, 215, 0, 0.1)', // Subtle gold tint
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
     borderRightColor: Colors.primary,
   },
   dateText: {
