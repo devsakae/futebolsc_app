@@ -32,6 +32,10 @@
         "projectId": "143d0e54-7566-4563-afec-12363dbf38d1"
       }
     },
-    "owner": "devsakae"
+    "owner": "devsakae",
+    "plugins": [
+      "expo-font",
+      "expo-web-browser"
+    ]
   }
 }

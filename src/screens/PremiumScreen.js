@@ -18,6 +18,7 @@ import { Crown, LogIn, LogOut, User } from 'lucide-react-native';
 import { verifyUser, getMatchesByTeam } from '../services/api';
 import MatchCard from '../components/MatchCard';
 
+// Necessário para que o navegador feche após o login e retorne ao app
 WebBrowser.maybeCompleteAuthSession();
 
 const PremiumScreen = () => {
@@ -26,18 +27,30 @@ const PremiumScreen = () => {
   const [matches, setMatches] = useState([]);
   const [matchesLoading, setMatchesLoading] = useState(false);
 
+  // Configuração de redirecionamento dinâmico
+  const redirectUri = AuthSession.makeRedirectUri({
+    scheme: 'futebolsc',
+    path: 'oauth2redirect', // Opcional, mas ajuda na clareza
+  });
+
   // Google Auth Request
   const [request, response, promptAsync] = Google.useAuthRequest({
+    // IDs gerados no Google Cloud Console
     androidClientId: '809569883997-7ua6trnib1kr2tur02dd2182htnn6ihv.apps.googleusercontent.com',
     webClientId: '809569883997-chubonpl6rtkaiu6hjffn8ng7t1t73o4.apps.googleusercontent.com',
+    iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
   }, {
-    scheme: 'futebolsc',
+    // Força o uso do Redirect URI que definimos acima
+    redirectUri,
   });
 
   useEffect(() => {
     if (response?.type === 'success') {
       const { authentication } = response;
+      console.log('Google Auth Success, fetching user info...');
       fetchUserInfo(authentication.accessToken);
+    } else if (response?.type === 'error') {
+      console.error('Google Auth Error:', response.error);
     }
   }, [response]);
 
@@ -49,6 +62,9 @@ const PremiumScreen = () => {
       });
       const googleUser = await res.json();
       
+      console.log('Logged in as:', googleUser.email);
+
+      // Sincroniza com o seu banco de dados
       const verifiedUser = await verifyUser({
         email: googleUser.email,
         name: googleUser.name,
@@ -56,24 +72,20 @@ const PremiumScreen = () => {
       });
       
       setUser(verifiedUser);
-      if (isPremium(verifiedUser)) {
+      if (verifiedUser.plan === 1) {
         fetchPremiumCalendar();
       }
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('Fetch user info error:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const isPremium = (userData) => {
-    // Flat structure: plan is a root level key (0: free, 1: premium)
-    return userData?.plan === 1;
-  };
-
   const fetchPremiumCalendar = async () => {
     try {
       setMatchesLoading(true);
+      // Busca jogos do Criciúma como exemplo
       const data = await getMatchesByTeam('CRICIÚMA');
       setMatches(data);
     } catch (error) {
@@ -88,15 +100,15 @@ const PremiumScreen = () => {
     setMatches([]);
   };
 
+  // Botão para testes sem precisar configurar o Google agora
   const mockLogin = async () => {
     setLoading(true);
     setTimeout(async () => {
       const mockData = {
         email: 'premium@devsakae.com.br',
         name: 'Usuário Premium (Demo)',
-        avatar: 'https://via.placeholder.com/150',
-        start_date: '2026-05-10',
-        plan: 1 // Root level plan
+        avatar: '',
+        plan: 1
       };
       const verified = await verifyUser(mockData);
       setUser(verified);
@@ -109,7 +121,7 @@ const PremiumScreen = () => {
     return (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={Colors.primary} />
-        <Text style={styles.loadingText}>AUTENTICANDO...</Text>
+        <Text style={styles.loadingText}>PROCESSANDO...</Text>
       </View>
     );
   }
@@ -121,7 +133,7 @@ const PremiumScreen = () => {
           <Crown size={64} color={Colors.primary} />
           <Text style={styles.heroTitle}>FUTEBOL SC PREMIUM</Text>
           <Text style={styles.heroSubtitle}>
-            Acesse calendários personalizados e recursos exclusivos.
+            Seu calendário personalizado em um só lugar.
           </Text>
         </View>
 
@@ -135,13 +147,15 @@ const PremiumScreen = () => {
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.mockButton} onPress={mockLogin}>
-          <Text style={styles.mockButtonText}>TESTAR COMO PREMIUM (DEMO)</Text>
+          <Text style={styles.mockButtonText}>Pular login (Usar Demo)</Text>
         </TouchableOpacity>
       </View>
     );
   }
 
-  if (!isPremium(user)) {
+  const isUserPremium = user.plan === 1;
+
+  if (!isUserPremium) {
     return (
       <View style={styles.container}>
         <View style={styles.profileHeader}>
@@ -160,9 +174,9 @@ const PremiumScreen = () => {
 
         <View style={styles.promoCard}>
           <Crown size={32} color={Colors.primary} />
-          <Text style={styles.promoTitle}>TORNE-SE PREMIUM</Text>
+          <Text style={styles.promoTitle}>ÁREA EXCLUSIVA</Text>
           <Text style={styles.promoText}>
-            Seu plano atual não possui acesso a esta área. Entre em contato para realizar o upgrade.
+            Acesse seu calendário personalizado tornando-se Premium.
           </Text>
         </View>
 
@@ -179,7 +193,7 @@ const PremiumScreen = () => {
       <View style={styles.premiumHeader}>
         <View style={styles.headerInfo}>
           <Text style={styles.premiumTitle}>MEU CALENDÁRIO</Text>
-          <Text style={styles.premiumSubtitle}>Criciúma • Todas as competições</Text>
+          <Text style={styles.premiumSubtitle}>Personalizado • {user.name}</Text>
         </View>
         <TouchableOpacity onPress={handleLogout}>
           <LogOut size={20} color={Colors.onSurfaceVariant} />
@@ -197,7 +211,7 @@ const PremiumScreen = () => {
           keyExtractor={(item, index) => `${item.match_id}-${item.tournament}-${index}`}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
-            <Text style={styles.emptyText}>Nenhum jogo encontrado para sua seleção.</Text>
+            <Text style={styles.emptyText}>Nenhum jogo encontrado.</Text>
           }
         />
       )}
@@ -209,7 +223,7 @@ const styles = StyleSheet.create({
   container: { flex: 1, padding: 20 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.background },
   loadingText: { ...Typography.labelLg, color: Colors.primary, marginTop: 12, letterSpacing: 2 },
-  hero: { alignItems: 'center', marginTop: 60, marginBottom: 40 },
+  hero: { alignItems: 'center', marginTop: 40, marginBottom: 40 },
   heroTitle: { ...Typography.displayLg, color: Colors.primary, fontSize: 28, marginTop: 20 },
   heroSubtitle: { ...Typography.bodyLg, color: Colors.onSurface, textAlign: 'center', marginTop: 10, paddingHorizontal: 20 },
   loginButton: { 
