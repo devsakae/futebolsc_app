@@ -6,13 +6,15 @@ import {
   TouchableOpacity, 
   ActivityIndicator, 
   Image,
-  FlatList
+  FlatList,
+  Platform
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as Google from 'expo-auth-session/providers/google';
+import * as AuthSession from 'expo-auth-session';
 import { Colors } from '../constants/Colors';
 import { Typography } from '../constants/Typography';
-import { Crown, LogIn, LogOut, Info } from 'lucide-react-native';
+import { Crown, LogIn, LogOut, User } from 'lucide-react-native';
 import { verifyUser, getMatchesByTeam } from '../services/api';
 import MatchCard from '../components/MatchCard';
 
@@ -25,11 +27,11 @@ const PremiumScreen = () => {
   const [matchesLoading, setMatchesLoading] = useState(false);
 
   // Google Auth Request
-  // Note: Replace these with actual client IDs from Google Cloud Console
   const [request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: 'YOUR_ANDROID_CLIENT_ID.apps.googleusercontent.com',
-    iosClientId: 'YOUR_IOS_CLIENT_ID.apps.googleusercontent.com',
-    webClientId: 'YOUR_WEB_CLIENT_ID.apps.googleusercontent.com',
+    androidClientId: '809569883997-7ua6trnib1kr2tur02dd2182htnn6ihv.apps.googleusercontent.com',
+    webClientId: '809569883997-chubonpl6rtkaiu6hjffn8ng7t1t73o4.apps.googleusercontent.com',
+  }, {
+    scheme: 'futebolsc',
   });
 
   useEffect(() => {
@@ -47,7 +49,6 @@ const PremiumScreen = () => {
       });
       const googleUser = await res.json();
       
-      // Verify user on our backend
       const verifiedUser = await verifyUser({
         email: googleUser.email,
         name: googleUser.name,
@@ -66,16 +67,14 @@ const PremiumScreen = () => {
   };
 
   const isPremium = (userData) => {
-    if (!userData || !userData.premium) return false;
-    // Check if any plan in the array is 1 (Premium)
-    return userData.premium.some(p => p.plan === 1);
+    // Flat structure: plan is a root level key (0: free, 1: premium)
+    return userData?.plan === 1;
   };
 
   const fetchPremiumCalendar = async () => {
     try {
       setMatchesLoading(true);
-      // Pre-selected team for now (e.g., Criciúma)
-      const data = await getMatchesByTeam('Criciúma');
+      const data = await getMatchesByTeam('CRICIÚMA');
       setMatches(data);
     } catch (error) {
       console.error('Error loading premium matches:', error);
@@ -89,21 +88,21 @@ const PremiumScreen = () => {
     setMatches([]);
   };
 
-  // Mock Login for demonstration/testing
   const mockLogin = async () => {
     setLoading(true);
     setTimeout(async () => {
       const mockData = {
-        email: 'test@devsakae.com.br',
-        name: 'Usuário Premium',
+        email: 'premium@devsakae.com.br',
+        name: 'Usuário Premium (Demo)',
         avatar: 'https://via.placeholder.com/150',
-        premium: [{ start_date: '2026-01-01', plan: 1 }] // Force premium for demo
+        start_date: '2026-05-10',
+        plan: 1 // Root level plan
       };
       const verified = await verifyUser(mockData);
       setUser(verified);
-      fetchPremiumCalendar();
       setLoading(false);
-    }, 1000);
+      fetchPremiumCalendar();
+    }, 800);
   };
 
   if (loading) {
@@ -146,7 +145,13 @@ const PremiumScreen = () => {
     return (
       <View style={styles.container}>
         <View style={styles.profileHeader}>
-          <Image source={{ uri: user.avatar }} style={styles.avatar} />
+          {user.avatar ? (
+            <Image source={{ uri: user.avatar }} style={styles.avatar} />
+          ) : (
+            <View style={[styles.avatar, styles.avatarPlaceholder]}>
+               <User size={40} color={Colors.primary} />
+            </View>
+          )}
           <Text style={styles.userName}>{user.name}</Text>
           <View style={styles.badgeFree}>
             <Text style={styles.badgeText}>PLANO FREE</Text>
@@ -189,7 +194,7 @@ const PremiumScreen = () => {
         <FlatList
           data={matches}
           renderItem={({ item }) => <MatchCard match={item} />}
-          keyExtractor={(item, index) => item.match_id?.toString() || index.toString()}
+          keyExtractor={(item, index) => `${item.match_id}-${item.tournament}-${index}`}
           contentContainerStyle={styles.list}
           ListEmptyComponent={
             <Text style={styles.emptyText}>Nenhum jogo encontrado para sua seleção.</Text>
@@ -221,6 +226,7 @@ const styles = StyleSheet.create({
   mockButtonText: { color: Colors.onSurfaceVariant, fontSize: 12, textDecorationLine: 'underline' },
   profileHeader: { alignItems: 'center', marginTop: 20, marginBottom: 30 },
   avatar: { width: 80, height: 80, borderRadius: 40, marginBottom: 12, borderWidth: 2, borderColor: Colors.primary },
+  avatarPlaceholder: { backgroundColor: Colors.surfaceContainerHigh, justifyContent: 'center', alignItems: 'center' },
   userName: { ...Typography.headlineSm, color: Colors.onSurface },
   badgeFree: { backgroundColor: Colors.surfaceContainerHigh, paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12, marginTop: 8 },
   badgeText: { color: Colors.onSurfaceVariant, fontSize: 10, fontWeight: 'bold' },

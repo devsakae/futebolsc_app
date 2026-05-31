@@ -87,7 +87,7 @@ export default function App() {
           <FlatList
             data={matches}
             renderItem={({ item }) => <MatchCard match={item} />}
-            keyExtractor={(item, index) => item.match_id?.toString() || index.toString()}
+            keyExtractor={(item, index) => `${item.match_id}-${item.tournament}-${index}`}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
             ListEmptyComponent={

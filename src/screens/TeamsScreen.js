@@ -50,8 +50,10 @@ const TeamsScreen = () => {
     let smallestDiff = Infinity;
 
     matchList.forEach((match, index) => {
+      // Assuming date format is DD/MM/YYYY
       const [day, month, year] = match.date.split('/');
       const matchDate = new Date(year, month - 1, day);
+      
       const diff = Math.abs(matchDate.getTime() - now.getTime());
       
       if (diff < smallestDiff) {
@@ -73,6 +75,7 @@ const TeamsScreen = () => {
       const data = await getMatchesByTeam(team);
       setMatches(data);
       
+      // Auto-scroll to nearest match after data is loaded
       setTimeout(() => {
         const index = findNearestMatchIndex(data);
         if (listRef.current && data.length > 0) {
@@ -114,7 +117,7 @@ const TeamsScreen = () => {
           ref={listRef}
           data={matches}
           renderItem={({ item }) => <MatchCard match={item} />}
-          keyExtractor={(item, index) => item.match_id?.toString() || index.toString()}
+          keyExtractor={(item, index) => `${item.match_id}-${item.tournament}-${index}`}
           contentContainerStyle={styles.listContainer}
           onScrollToIndexFailed={(info) => {
             setTimeout(() => {
@@ -163,7 +166,7 @@ const TeamsScreen = () => {
 
               <FlatList
                 data={filteredTeams}
-                keyExtractor={(item) => item}
+                keyExtractor={(item, index) => `${item}-${index}`}
                 renderItem={({ item }) => (
                   <TouchableOpacity 
                     style={styles.teamItem} 

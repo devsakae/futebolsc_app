@@ -21,7 +21,7 @@ const TournamentsScreen = () => {
   const [selectedTournament, setSelectedTournament] = useState(null);
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [tournamentsLoading, setTournamentsLoading] = useState(true);
+  const [tournamentsLoading, setTeamsLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const listRef = useRef(null);
@@ -32,13 +32,13 @@ const TournamentsScreen = () => {
 
   const fetchTournaments = async () => {
     try {
-      setTournamentsLoading(true);
+      setTeamsLoading(true);
       const data = await getTournaments();
       setTournaments(data);
     } catch (error) {
       console.error('Error loading tournaments:', error);
     } finally {
-      setTournamentsLoading(false);
+      setTeamsLoading(false);
     }
   };
 
@@ -114,7 +114,7 @@ const TournamentsScreen = () => {
           ref={listRef}
           data={matches}
           renderItem={({ item }) => <MatchCard match={item} allowFeatured={false} />}
-          keyExtractor={(item, index) => item.match_id?.toString() || index.toString()}
+          keyExtractor={(item, index) => `${item.match_id}-${item.tournament}-${index}`}
           contentContainerStyle={styles.listContainer}
           onScrollToIndexFailed={(info) => {
             setTimeout(() => {
@@ -163,7 +163,7 @@ const TournamentsScreen = () => {
 
               <FlatList
                 data={filteredTournaments}
-                keyExtractor={(item) => item}
+                keyExtractor={(item, index) => `${item}-${index}`}
                 renderItem={({ item }) => (
                   <TouchableOpacity 
                     style={styles.tournamentItem} 
