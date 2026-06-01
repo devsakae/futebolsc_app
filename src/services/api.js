@@ -1,8 +1,13 @@
 import axios from 'axios';
+import todayMatchesJson from '../json/matches-today.json';
+import teamsJson from '../json/teams.json';
 
 const API_BASE_URL = 'https://api-futebol-qqpfwbjxua-rj.a.run.app';
-// const API_BASE_URL = "http://localhost:8080"
 const API_TOKEN = 'development'; // Replace with a valid token
+const MODE = process.env.EXPO_PUBLIC_ENVIRONMENT
+const DEVMODE = MODE === "dev"
+
+DEVMODE && console.info("DEVELOPMENT MODE");
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -13,6 +18,7 @@ const api = axios.create({
 });
 
 export const getTodayMatches = async () => {
+  if (DEVMODE) return todayMatchesJson;
   try {
     const response = await api.get('/matches/today');
     return response.data;
@@ -23,6 +29,7 @@ export const getTodayMatches = async () => {
 };
 
 export const getTeams = async (params = {}) => {
+  if (DEVMODE) return teamsJson;
   try {
     const response = await api.get('/teams', { params });
     return response.data;
@@ -68,6 +75,16 @@ export const verifyUser = async (userData) => {
     return response.data;
   } catch (error) {
     console.error('Error verifying user:', error);
+    throw error;
+  }
+};
+
+export const updateUserTeam = async (email, teamData) => {
+  try {
+    const response = await api.post('/user/update-team', { email, team: teamData });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating user team:', error);
     throw error;
   }
 };
