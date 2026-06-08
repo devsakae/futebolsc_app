@@ -5,7 +5,7 @@ import matchesCriciuma from '../json/matches-team-cec.json'
 
 const API_BASE_URL = 'https://api-futebol-qqpfwbjxua-rj.a.run.app';
 const API_TOKEN = 'development'; // Replace with a valid token
-const MODE = process.env.EXPO_PUBLIC_ENVIRONMENT
+const MODE = process.env.EXPO_PUBLIC_ENVIRONMENT || "dev"
 const DEVMODE = MODE === "dev"
 
 DEVMODE && console.info("DEVELOPMENT MODE");
