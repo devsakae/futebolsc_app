@@ -76,7 +76,7 @@ const PremiumScreen = () => {
 
   const handleUserLoggedIn = (userData) => {
     setUser(userData);
-    if (userData.plan === 1) {
+    if (userData.plan > 0) {
       // Load available teams for the selector
       fetchAvailableTeams();
       
@@ -210,7 +210,8 @@ const PremiumScreen = () => {
     );
   }
 
-  if (user.plan !== 1) {
+  if (user.plan === 0) {
+    console.log('free user')
     return (
       <View style={styles.container}>
         <View style={styles.profileHeader}>

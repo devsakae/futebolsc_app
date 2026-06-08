@@ -1,6 +1,7 @@
 import axios from 'axios';
 import todayMatchesJson from '../json/matches-today.json';
 import teamsJson from '../json/teams.json';
+import matchesCriciuma from '../json/matches-team-cec.json'
 
 const API_BASE_URL = 'https://api-futebol-qqpfwbjxua-rj.a.run.app';
 const API_TOKEN = 'development'; // Replace with a valid token
@@ -40,6 +41,7 @@ export const getTeams = async (params = {}) => {
 };
 
 export const getMatchesByTeam = async (teamName) => {
+  if (DEVMODE) return matchesCriciuma;
   try {
     const response = await api.get(`/matches/team/${encodeURIComponent(teamName)}`);
     return response.data;
