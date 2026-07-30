@@ -17,7 +17,7 @@ import {
   Inter_600SemiBold, 
   Inter_700Bold 
 } from '@expo-google-fonts/inter';
-import { Calendar, Users, Trophy, Info, Crown, X } from 'lucide-react-native';
+import { Calendar, Users, Trophy, Info, Crown, X, CalendarDays } from 'lucide-react-native';
 
 import Header from './src/components/Header';
 import MatchCard from './src/components/MatchCard';
@@ -34,6 +34,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('today');
   const [selectedTeam, setSelectedTeam] = useState(null);
+  const [isTodayOnly, setIsTodayOnly] = useState(false);
   const [teams, setTeams] = useState([]);
   const listRef = useRef(null);
 
@@ -43,6 +44,24 @@ export default function App() {
     Inter_600SemiBold,
     Inter_700Bold,
   });
+
+  const filterMatchesForToday = (matchList) => {
+    if (!matchList || !Array.isArray(matchList)) return [];
+    const today = new Date();
+    const todayDay = today.getDate();
+    const todayMonth = today.getMonth() + 1;
+    const todayYear = today.getFullYear();
+
+    return matchList.filter((match) => {
+      if (!match || !match.date) return false;
+      const parts = match.date.split('/');
+      if (parts.length !== 3) return false;
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10);
+      const year = parseInt(parts[2], 10);
+      return day === todayDay && month === todayMonth && year === todayYear;
+    });
+  };
 
   const findNearestMatchIndex = (matchList) => {
     if (!matchList || matchList.length === 0) return 0;
@@ -76,14 +95,22 @@ export default function App() {
     }, 400);
   };
 
-  const fetchMatchesForTeam = async (teamName) => {
+  const fetchMatchesForTeam = async (teamName, todayOnly = false) => {
     try {
       setLoading(true);
       setSelectedTeam(teamName);
+      setIsTodayOnly(todayOnly);
       setActiveTab('today');
+
       const data = await getMatchesByTeam(teamName);
-      setMatches(data || []);
-      scrollToNearestMatch(data);
+      
+      if (todayOnly) {
+        const todayData = filterMatchesForToday(data);
+        setMatches(todayData);
+      } else {
+        setMatches(data || []);
+        scrollToNearestMatch(data);
+      }
     } catch (error) {
       console.error(`Failed to fetch matches for ${teamName}:`, error);
       setMatches([]);
@@ -96,6 +123,7 @@ export default function App() {
     try {
       setLoading(true);
       setSelectedTeam(null);
+      setIsTodayOnly(false);
       setActiveTab('today');
       const data = await getTodayMatches();
       setMatches(data || []);
@@ -110,11 +138,16 @@ export default function App() {
   const handleRoute = async (teamsList = teams) => {
     const route = getRouteFromUrl();
 
-    if (route.type === 'team' && route.teamParam) {
+    if ((route.type === 'team' || route.type === 'team_today') && route.teamParam) {
       const officialTeamName = findMatchingTeam(teamsList, route.teamParam);
       if (officialTeamName) {
-        updateBrowserUrl(`/${encodeURIComponent(officialTeamName)}`, `Futebol SC - ${officialTeamName}`);
-        await fetchMatchesForTeam(officialTeamName);
+        if (route.isTodayOnly) {
+          updateBrowserUrl(`/${encodeURIComponent(officialTeamName)}/hoje`, `Futebol SC - ${officialTeamName} Hoje`);
+          await fetchMatchesForTeam(officialTeamName, true);
+        } else {
+          updateBrowserUrl(`/${encodeURIComponent(officialTeamName)}`, `Futebol SC - ${officialTeamName}`);
+          await fetchMatchesForTeam(officialTeamName, false);
+        }
         return;
       }
     }
@@ -125,6 +158,7 @@ export default function App() {
       await fetchTodayMatches();
     } else {
       setSelectedTeam(null);
+      setIsTodayOnly(false);
       setActiveTab(route.value);
       updateBrowserUrl(`/${route.value}`, `Futebol SC - ${route.value.toUpperCase()}`);
     }
@@ -161,6 +195,7 @@ export default function App() {
       fetchTodayMatches();
     } else {
       setSelectedTeam(null);
+      setIsTodayOnly(false);
       setActiveTab(tabKey);
       updateBrowserUrl(`/${tabKey}`, `Futebol SC - ${tabKey.toUpperCase()}`);
     }
@@ -168,7 +203,18 @@ export default function App() {
 
   const handleSelectTeamFromScreen = (teamName) => {
     updateBrowserUrl(`/${encodeURIComponent(teamName)}`, `Futebol SC - ${teamName}`);
-    fetchMatchesForTeam(teamName);
+    fetchMatchesForTeam(teamName, false);
+  };
+
+  const toggleTodayOnlyView = () => {
+    if (!selectedTeam) return;
+    if (isTodayOnly) {
+      updateBrowserUrl(`/${encodeURIComponent(selectedTeam)}`, `Futebol SC - ${selectedTeam}`);
+      fetchMatchesForTeam(selectedTeam, false);
+    } else {
+      updateBrowserUrl(`/${encodeURIComponent(selectedTeam)}/hoje`, `Futebol SC - ${selectedTeam} Hoje`);
+      fetchMatchesForTeam(selectedTeam, true);
+    }
   };
 
   if (!fontsLoaded) {
@@ -200,7 +246,9 @@ export default function App() {
             <View style={styles.loaderContainer}>
               <ActivityIndicator size="large" color={Colors.primary} />
               <Text style={styles.loadingText}>
-                {selectedTeam ? `BUSCANDO JOGOS DE ${selectedTeam}...` : 'CARREGANDO JOGOS...'}
+                {selectedTeam 
+                  ? (isTodayOnly ? `BUSCANDO JOGOS DE HOJE DE ${selectedTeam}...` : `BUSCANDO JOGOS DE ${selectedTeam}...`)
+                  : 'CARREGANDO JOGOS...'}
               </Text>
             </View>
           );
@@ -222,30 +270,44 @@ export default function App() {
               selectedTeam ? (
                 <View style={styles.teamBannerContainer}>
                   <View style={styles.teamBannerTextContainer}>
-                    <Text style={styles.teamBannerLabel}>JOGOS DO TIME</Text>
+                    <Text style={styles.teamBannerLabel}>
+                      {isTodayOnly ? 'JOGOS DE HOJE DO TIME' : 'CALENDÁRIO DO TIME'}
+                    </Text>
                     <Text style={styles.teamBannerTitle}>{selectedTeam}</Text>
                   </View>
-                  <TouchableOpacity 
-                    style={styles.clearTeamButton}
-                    onPress={() => handleTabPress('today')}
-                  >
-                    <X size={14} color={Colors.primary} />
-                    <Text style={styles.clearTeamText}>VER HOJE</Text>
-                  </TouchableOpacity>
+                  <View style={styles.bannerActions}>
+                    <TouchableOpacity 
+                      style={styles.toggleViewButton}
+                      onPress={toggleTodayOnlyView}
+                    >
+                      <CalendarDays size={14} color={Colors.primary} />
+                      <Text style={styles.toggleViewText}>
+                        {isTodayOnly ? 'VER TUDO' : 'VER HOJE'}
+                      </Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.clearTeamButton}
+                      onPress={() => handleTabPress('today')}
+                    >
+                      <X size={14} color={Colors.onSurfaceVariant} />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               ) : null
             }
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>
-                  {selectedTeam 
-                    ? `NENHUMA PARTIDA ENCONTRADA PARA ${selectedTeam}` 
-                    : 'NENHUM JOGO PARA HOJE'}
+                  {isTodayOnly 
+                    ? "Nenhuma partida registrada para hoje"
+                    : selectedTeam 
+                      ? `NENHUMA PARTIDA ENCONTRADA PARA ${selectedTeam}` 
+                      : 'NENHUM JOGO PARA HOJE'}
                 </Text>
               </View>
             }
             refreshing={loading}
-            onRefresh={() => selectedTeam ? fetchMatchesForTeam(selectedTeam) : fetchTodayMatches()}
+            onRefresh={() => selectedTeam ? fetchMatchesForTeam(selectedTeam, isTodayOnly) : fetchTodayMatches()}
           />
         );
     }
@@ -365,7 +427,8 @@ const styles = StyleSheet.create({
   teamBannerTextContainer: { flex: 1 },
   teamBannerLabel: { fontFamily: 'Inter_700Bold', fontSize: 10, color: Colors.primary, letterSpacing: 1 },
   teamBannerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: Colors.onSurface, marginTop: 2 },
-  clearTeamButton: {
+  bannerActions: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  toggleViewButton: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(233, 196, 0, 0.15)',
@@ -376,7 +439,14 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
     gap: 4,
   },
-  clearTeamText: { fontFamily: 'Inter_700Bold', fontSize: 10, color: Colors.primary, letterSpacing: 0.5 },
+  toggleViewText: { fontFamily: 'Inter_700Bold', fontSize: 10, color: Colors.primary, letterSpacing: 0.5 },
+  clearTeamButton: {
+    padding: 6,
+    borderRadius: 6,
+    backgroundColor: Colors.surfaceContainerLow,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   bottomNav: {
     flexDirection: 'row',
     height: 65,
@@ -397,7 +467,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    justifyContent: 'center',
+    justify.content: 'center',
     alignItems: 'center',
     elevation: 8,
     shadowColor: Colors.primary,

@@ -94,7 +94,7 @@ const KNOWN_TAB_ROUTES = {
  */
 export const getRouteFromUrl = () => {
   if (Platform.OS !== 'web' || typeof window === 'undefined') {
-    return { type: 'tab', value: 'today', teamParam: null };
+    return { type: 'tab', value: 'today', teamParam: null, isTodayOnly: false };
   }
 
   const pathname = window.location.pathname || '';
@@ -106,14 +106,27 @@ export const getRouteFromUrl = () => {
       type: 'tab',
       value: KNOWN_TAB_ROUTES[lowerPath],
       teamParam: null,
+      isTodayOnly: false,
     };
   }
 
-  // If not a static tab, it's a team name route!
+  // Check if route ends with /hoje or /today (e.g. "criciuma/hoje" or "CRICIÚMA/hoje")
+  if (lowerPath.endsWith('/hoje') || lowerPath.endsWith('/today')) {
+    const teamPart = cleanPath.replace(/\/(hoje|today)$/i, '').trim();
+    return {
+      type: 'team_today',
+      value: 'today',
+      teamParam: teamPart,
+      isTodayOnly: true,
+    };
+  }
+
+  // If not a static tab, it's a full team schedule route!
   return {
     type: 'team',
     value: 'today',
     teamParam: cleanPath,
+    isTodayOnly: false,
   };
 };
 
