@@ -15,10 +15,11 @@ import { Typography } from '../constants/Typography';
 import { ChevronDown, Search, X } from 'lucide-react-native';
 import { getTeams, getMatchesByTeam } from '../services/api';
 import MatchCard from '../components/MatchCard';
+import { updateBrowserUrl } from '../utils/url';
 
-const TeamsScreen = () => {
+const TeamsScreen = ({ initialTeam, onSelectTeam }) => {
   const [teams, setTeams] = useState([]);
-  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [selectedTeam, setSelectedTeam] = useState(initialTeam || null);
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(false);
   const [teamsLoading, setTeamsLoading] = useState(true);
@@ -30,12 +31,18 @@ const TeamsScreen = () => {
     fetchTeams();
   }, []);
 
+  useEffect(() => {
+    if (initialTeam) {
+      setSelectedTeam(initialTeam);
+      loadTeamMatches(initialTeam);
+    }
+  }, [initialTeam]);
+
   const fetchTeams = async () => {
     try {
       setTeamsLoading(true);
       const data = await getTeams({ uf: 'SC' });
-      // Data is now a list of objects: [{name, fcfsc_id, sofascore_id}, ...]
-      setTeams(data);
+      setTeams(data || []);
     } catch (error) {
       console.error('Error loading teams:', error);
     } finally {
@@ -51,6 +58,7 @@ const TeamsScreen = () => {
     let smallestDiff = Infinity;
 
     matchList.forEach((match, index) => {
+      if (!match.date) return;
       const [day, month, year] = match.date.split('/');
       const matchDate = new Date(year, month - 1, day);
       const diff = Math.abs(matchDate.getTime() - now.getTime());
@@ -64,21 +72,16 @@ const TeamsScreen = () => {
     return nearestIndex;
   };
 
-  const handleSelectTeam = async (teamObj) => {
-    const teamName = teamObj.name;
-    setSelectedTeam(teamName);
-    setModalVisible(false);
-    setSearchQuery('');
-    
+  const loadTeamMatches = async (teamName) => {
     try {
       setLoading(true);
       const data = await getMatchesByTeam(teamName);
-      setMatches(data);
+      setMatches(data || []);
       
       setTimeout(() => {
         const index = findNearestMatchIndex(data);
-        if (listRef.current && data.length > 0) {
-          listRef.current.scrollToIndex({ index, animated: true, viewPosition: 0.5 });
+        if (listRef.current && data && data.length > 0) {
+          listRef.current.scrollToIndex({ index, animated: true, viewPosition: 0.3 });
         }
       }, 500);
       
@@ -89,9 +92,24 @@ const TeamsScreen = () => {
     }
   };
 
-  const filteredTeams = teams.filter(team => 
-    team.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const handleSelectTeam = async (teamObj) => {
+    const teamName = teamObj.name;
+    setSelectedTeam(teamName);
+    setModalVisible(false);
+    setSearchQuery('');
+
+    if (onSelectTeam) {
+      onSelectTeam(teamName);
+    } else {
+      updateBrowserUrl(`/${encodeURIComponent(teamName)}`, `Futebol SC - ${teamName}`);
+      await loadTeamMatches(teamName);
+    }
+  };
+
+  const filteredTeams = teams.filter(team => {
+    const name = typeof team === 'string' ? team : team.name;
+    return name.toLowerCase().includes(searchQuery.toLowerCase());
+  });
 
   return (
     <View style={styles.container}>
@@ -165,15 +183,18 @@ const TeamsScreen = () => {
 
               <FlatList
                 data={filteredTeams}
-                keyExtractor={(item, index) => `${item.name}-${index}`}
-                renderItem={({ item }) => (
-                  <TouchableOpacity 
-                    style={styles.teamItem} 
-                    onPress={() => handleSelectTeam(item)}
-                  >
-                    <Text style={styles.teamItemText}>{item.name}</Text>
-                  </TouchableOpacity>
-                )}
+                keyExtractor={(item, index) => `${typeof item === 'string' ? item : item.name}-${index}`}
+                renderItem={({ item }) => {
+                  const teamName = typeof item === 'string' ? item : item.name;
+                  return (
+                    <TouchableOpacity 
+                      style={styles.teamItem} 
+                      onPress={() => handleSelectTeam(typeof item === 'string' ? { name: item } : item)}
+                    >
+                      <Text style={styles.teamItemText}>{teamName}</Text>
+                    </TouchableOpacity>
+                  );
+                }}
                 ItemSeparatorComponent={() => <View style={styles.separator} />}
               />
             </View>

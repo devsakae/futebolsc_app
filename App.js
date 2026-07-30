@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   StyleSheet, 
   View, 
@@ -6,7 +6,8 @@ import {
   ActivityIndicator, 
   StatusBar, 
   Text,
-  TouchableOpacity
+  TouchableOpacity,
+  Platform
 } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,7 +17,7 @@ import {
   Inter_600SemiBold, 
   Inter_700Bold 
 } from '@expo-google-fonts/inter';
-import { Calendar, Users, Trophy, Info, Crown } from 'lucide-react-native';
+import { Calendar, Users, Trophy, Info, Crown, X } from 'lucide-react-native';
 
 import Header from './src/components/Header';
 import MatchCard from './src/components/MatchCard';
@@ -25,12 +26,16 @@ import TeamsScreen from './src/screens/TeamsScreen';
 import TournamentsScreen from './src/screens/TournamentsScreen';
 import PremiumScreen from './src/screens/PremiumScreen';
 import { Colors } from './src/constants/Colors';
-import { getTodayMatches } from './src/services/api';
+import { getTodayMatches, getMatchesByTeam, getTeams } from './src/services/api';
+import { getRouteFromUrl, findMatchingTeam, updateBrowserUrl } from './src/utils/url';
 
 export default function App() {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('today');
+  const [selectedTeam, setSelectedTeam] = useState(null);
+  const [teams, setTeams] = useState([]);
+  const listRef = useRef(null);
 
   let [fontsLoaded] = useFonts({
     Anton_400Regular,
@@ -39,21 +44,131 @@ export default function App() {
     Inter_700Bold,
   });
 
-  useEffect(() => {
-    fetchMatches();
-  }, []);
+  const findNearestMatchIndex = (matchList) => {
+    if (!matchList || matchList.length === 0) return 0;
+    
+    const now = new Date();
+    let nearestIndex = 0;
+    let smallestDiff = Infinity;
 
-  const fetchMatches = async () => {
+    matchList.forEach((match, index) => {
+      if (!match.date) return;
+      const [day, month, year] = match.date.split('/');
+      const matchDate = new Date(year, month - 1, day);
+      const diff = Math.abs(matchDate.getTime() - now.getTime());
+      
+      if (diff < smallestDiff) {
+        smallestDiff = diff;
+        nearestIndex = index;
+      }
+    });
+
+    return nearestIndex;
+  };
+
+  const scrollToNearestMatch = (matchList) => {
+    if (!matchList || matchList.length === 0) return;
+    setTimeout(() => {
+      const index = findNearestMatchIndex(matchList);
+      if (listRef.current) {
+        listRef.current.scrollToIndex({ index, animated: true, viewPosition: 0.3 });
+      }
+    }, 400);
+  };
+
+  const fetchMatchesForTeam = async (teamName) => {
     try {
       setLoading(true);
-      const data = await getTodayMatches();
-      setMatches(data);
+      setSelectedTeam(teamName);
+      setActiveTab('today');
+      const data = await getMatchesByTeam(teamName);
+      setMatches(data || []);
+      scrollToNearestMatch(data);
     } catch (error) {
-      console.error('Failed to fetch matches:', error);
+      console.error(`Failed to fetch matches for ${teamName}:`, error);
       setMatches([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchTodayMatches = async () => {
+    try {
+      setLoading(true);
+      setSelectedTeam(null);
+      setActiveTab('today');
+      const data = await getTodayMatches();
+      setMatches(data || []);
+    } catch (error) {
+      console.error('Failed to fetch today matches:', error);
+      setMatches([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleRoute = async (teamsList = teams) => {
+    const route = getRouteFromUrl();
+
+    if (route.type === 'team' && route.teamParam) {
+      const officialTeamName = findMatchingTeam(teamsList, route.teamParam);
+      if (officialTeamName) {
+        updateBrowserUrl(`/${encodeURIComponent(officialTeamName)}`, `Futebol SC - ${officialTeamName}`);
+        await fetchMatchesForTeam(officialTeamName);
+        return;
+      }
+    }
+
+    // Default or static tab routes
+    if (route.value === 'today') {
+      updateBrowserUrl('/', 'Futebol SC - Hoje');
+      await fetchTodayMatches();
+    } else {
+      setSelectedTeam(null);
+      setActiveTab(route.value);
+      updateBrowserUrl(`/${route.value}`, `Futebol SC - ${route.value.toUpperCase()}`);
+    }
+  };
+
+  useEffect(() => {
+    const init = async () => {
+      let loadedTeams = [];
+      try {
+        loadedTeams = await getTeams({ uf: 'SC' });
+        setTeams(loadedTeams || []);
+      } catch (err) {
+        console.error('Error fetching teams:', err);
+      }
+      await handleRoute(loadedTeams);
+    };
+
+    init();
+  }, []);
+
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const onPopState = () => {
+        handleRoute(teams);
+      };
+      window.addEventListener('popstate', onPopState);
+      return () => window.removeEventListener('popstate', onPopState);
+    }
+  }, [teams]);
+
+  const handleTabPress = (tabKey) => {
+    if (tabKey === 'today') {
+      updateBrowserUrl('/', 'Futebol SC - Hoje');
+      fetchTodayMatches();
+    } else {
+      setSelectedTeam(null);
+      setActiveTab(tabKey);
+      updateBrowserUrl(`/${tabKey}`, `Futebol SC - ${tabKey.toUpperCase()}`);
+    }
+  };
+
+  const handleSelectTeamFromScreen = (teamName) => {
+    updateBrowserUrl(`/${encodeURIComponent(teamName)}`, `Futebol SC - ${teamName}`);
+    fetchMatchesForTeam(teamName);
   };
 
   if (!fontsLoaded) {
@@ -69,7 +184,12 @@ export default function App() {
       case 'about':
         return <AboutScreen />;
       case 'teams':
-        return <TeamsScreen />;
+        return (
+          <TeamsScreen 
+            initialTeam={selectedTeam} 
+            onSelectTeam={handleSelectTeamFromScreen} 
+          />
+        );
       case 'tournaments':
         return <TournamentsScreen />;
       case 'premium':
@@ -79,24 +199,53 @@ export default function App() {
           return (
             <View style={styles.loaderContainer}>
               <ActivityIndicator size="large" color={Colors.primary} />
-              <Text style={styles.loadingText}>CARREGANDO JOGOS...</Text>
+              <Text style={styles.loadingText}>
+                {selectedTeam ? `BUSCANDO JOGOS DE ${selectedTeam}...` : 'CARREGANDO JOGOS...'}
+              </Text>
             </View>
           );
         }
         return (
           <FlatList
+            ref={listRef}
             data={matches}
             renderItem={({ item }) => <MatchCard match={item} />}
             keyExtractor={(item, index) => `${item.match_id}-${item.tournament}-${index}`}
             contentContainerStyle={styles.listContainer}
             showsVerticalScrollIndicator={false}
+            onScrollToIndexFailed={(info) => {
+              setTimeout(() => {
+                listRef.current?.scrollToIndex({ index: info.index, animated: true });
+              }, 500);
+            }}
+            ListHeaderComponent={
+              selectedTeam ? (
+                <View style={styles.teamBannerContainer}>
+                  <View style={styles.teamBannerTextContainer}>
+                    <Text style={styles.teamBannerLabel}>JOGOS DO TIME</Text>
+                    <Text style={styles.teamBannerTitle}>{selectedTeam}</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.clearTeamButton}
+                    onPress={() => handleTabPress('today')}
+                  >
+                    <X size={14} color={Colors.primary} />
+                    <Text style={styles.clearTeamText}>VER HOJE</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : null
+            }
             ListEmptyComponent={
               <View style={styles.emptyContainer}>
-                <Text style={styles.emptyText}>NENHUM JOGO PARA HOJE</Text>
+                <Text style={styles.emptyText}>
+                  {selectedTeam 
+                    ? `NENHUMA PARTIDA ENCONTRADA PARA ${selectedTeam}` 
+                    : 'NENHUM JOGO PARA HOJE'}
+                </Text>
               </View>
             }
             refreshing={loading}
-            onRefresh={fetchMatches}
+            onRefresh={() => selectedTeam ? fetchMatchesForTeam(selectedTeam) : fetchTodayMatches()}
           />
         );
     }
@@ -117,32 +266,34 @@ export default function App() {
           <View style={styles.bottomNav}>
             <TouchableOpacity 
               style={styles.navItem} 
-              onPress={() => setActiveTab('today')}
+              onPress={() => handleTabPress('today')}
             >
               <Calendar 
                 size={20} 
-                color={activeTab === 'today' ? Colors.primary : Colors.onSurfaceVariant} 
-                strokeWidth={activeTab === 'today' ? 3 : 2}
+                color={activeTab === 'today' && !selectedTeam ? Colors.primary : Colors.onSurfaceVariant} 
+                strokeWidth={activeTab === 'today' && !selectedTeam ? 3 : 2}
               />
-              <Text style={[styles.navText, activeTab === 'today' && styles.activeNavText]}>HOJE</Text>
+              <Text style={[styles.navText, activeTab === 'today' && !selectedTeam && styles.activeNavText]}>HOJE</Text>
             </TouchableOpacity>
 
             <TouchableOpacity 
               style={styles.navItem}
-              onPress={() => setActiveTab('teams')}
+              onPress={() => handleTabPress('teams')}
             >
               <Users 
                 size={20} 
-                color={activeTab === 'teams' ? Colors.primary : Colors.onSurfaceVariant} 
-                strokeWidth={activeTab === 'teams' ? 3 : 2}
+                color={activeTab === 'teams' || selectedTeam ? Colors.primary : Colors.onSurfaceVariant} 
+                strokeWidth={activeTab === 'teams' || selectedTeam ? 3 : 2}
               />
-              <Text style={[styles.navText, activeTab === 'teams' && styles.activeNavText]}>TIMES</Text>
+              <Text style={[styles.navText, (activeTab === 'teams' || selectedTeam) && styles.activeNavText]}>
+                {selectedTeam ? 'TIME' : 'TIMES'}
+              </Text>
             </TouchableOpacity>
 
             {/* STYLISH PREMIUM BUTTON */}
             <TouchableOpacity 
               style={styles.premiumNavItem}
-              onPress={() => setActiveTab('premium')}
+              onPress={() => handleTabPress('premium')}
             >
               <LinearGradient
                 colors={activeTab === 'premium' ? [Colors.primary, '#E9C400', '#B8860B'] : ['#333', '#1A1A1A']}
@@ -163,7 +314,7 @@ export default function App() {
 
             <TouchableOpacity 
               style={styles.navItem}
-              onPress={() => setActiveTab('tournaments')}
+              onPress={() => handleTabPress('tournaments')}
             >
               <Trophy 
                 size={20} 
@@ -175,7 +326,7 @@ export default function App() {
 
             <TouchableOpacity 
               style={styles.navItem}
-              onPress={() => setActiveTab('about')}
+              onPress={() => handleTabPress('about')}
             >
               <Info 
                 size={20} 
@@ -196,9 +347,36 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
   listContainer: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 24 },
   loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  loadingText: { fontFamily: 'Anton_400Regular', color: Colors.primary, marginTop: 12, letterSpacing: 2 },
-  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100 },
-  emptyText: { fontFamily: 'Anton_400Regular', color: Colors.onSurfaceVariant, fontSize: 16, letterSpacing: 1 },
+  loadingText: { fontFamily: 'Anton_400Regular', color: Colors.primary, marginTop: 12, letterSpacing: 2, textAlign: 'center', paddingHorizontal: 20 },
+  emptyContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 100, paddingHorizontal: 20 },
+  emptyText: { fontFamily: 'Anton_400Regular', color: Colors.onSurfaceVariant, fontSize: 16, letterSpacing: 1, textAlign: 'center' },
+  teamBannerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.surfaceContainerHigh,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    marginBottom: 16,
+  },
+  teamBannerTextContainer: { flex: 1 },
+  teamBannerLabel: { fontFamily: 'Inter_700Bold', fontSize: 10, color: Colors.primary, letterSpacing: 1 },
+  teamBannerTitle: { fontFamily: 'Anton_400Regular', fontSize: 20, color: Colors.onSurface, marginTop: 2 },
+  clearTeamButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(233, 196, 0, 0.15)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: Colors.primary,
+    gap: 4,
+  },
+  clearTeamText: { fontFamily: 'Inter_700Bold', fontSize: 10, color: Colors.primary, letterSpacing: 0.5 },
   bottomNav: {
     flexDirection: 'row',
     height: 65,
